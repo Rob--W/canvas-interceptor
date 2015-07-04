@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html
+<head>
+<meta charset="utf8">
+<meta name="viewport" content="width=device-width">
+<title>canvas-interceptor.js test</title>
+</head>
+<body style="font-family:monospace">
+<script src="canvas-interceptor.js"></script>
+<canvas id=canvas width=200 height=202></canvas>
+<script>
+var failures = 0;
+function assertEqual(actual, expected) {
+    if (actual === expected) {
+        return;
+    }
+    ++failures;
+    document.body.appendChild(document.createElement('hr'));
+    document.body.appendChild(document.createTextNode('Actual: ' + actual));
+    document.body.appendChild(document.createElement('br'));
+    document.body.appendChild(document.createTextNode('Expect: ' + expected));
+    console.assert(actual === expected, actual + ' === ' + expected);
+}
+
+// All together...
+var ctx = document.getElementById('canvas').getContext('2d');
+ctx.translate(0, 0);
+ctx.fillStyle = 'green';
+assertEqual(ctx.fillStyle, '#008000');
+ctx.fillRect(10, 10, 100, 100);
+
+var ctxOffline = document.createElement('canvas').getContext('2d');
+ctxOffline.putImageData(constructImageData(1, 1, [1,2,3,4]), 1, 1);
+
+var expectedCode = [
+    'var ctx1 = document.createElement("canvas").getContext("2d");',
+    'ctx1.canvas.width = 200;',
+    'ctx1.canvas.height = 202;',
+    'document.body.appendChild(ctx1.canvas);',
+    'ctx1.translate(0, 0);',
+    'ctx1.fillStyle = "green";',
+    '// read ctx1.fillStyle',
+    'ctx1.fillRect(10, 10, 100, 100);',
+].join('\n');
+assertEqual(getCanvasReplay(canvas), expectedCode);
+
+// Verifies that the constructImageData function is prepended if needed.
+assertEqual(typeof constructImageData, 'function');
+var expectedCodeOffline = [
+    'var constructImageData = ' + constructImageData + ';',
+    'var ctx2 = document.createElement("canvas").getContext("2d");',
+    'ctx2.canvas.width = 300;',
+    'ctx2.canvas.height = 150;',
+    'document.body.appendChild(ctx2.canvas);',
+    'ctx2.putImageData(constructImageData(1, 1, [1,2,3,4]), 1, 1);',
+].join('\n');
+assertEqual(getCanvasReplay(ctxOffline), expectedCodeOffline);
+
+CanvasRenderingContext2D.prototype.__proxyUnwrap();
+assertEqual(CanvasRenderingContext2D.prototype.__proxyUnwrap, undefined);
+assertEqual(ctx.__proxyUnwrap, undefined);
+// Unwrapping should not clear the saved logs.
+assertEqual(getCanvasReplay(ctx), expectedCode);
+
+eval(expectedCode);
+assertEqual(document.body.lastChild.nodeName.toUpperCase(), 'CANVAS');
+assertEqual(document.body.lastChild.toDataURL(),
+        document.getElementById('canvas').toDataURL());
+
+
+// Unit tests for serializeArg.
+assertEqual(serializeArg(undefined), 'undefined');
+assertEqual(serializeArg(null), 'null');
+assertEqual(serializeArg(''), '""');
+assertEqual(serializeArg('a'), '"a"');
+assertEqual(serializeArg(0), '0');
+assertEqual(serializeArg(1), '1');
+assertEqual(serializeArg(true), 'true');
+assertEqual(serializeArg(false), 'false');
+assertEqual(serializeArg([]), '[]');
+assertEqual(serializeArg(['', 0]), '["", 0]');
+assertEqual(serializeArg({a:1}), '{"a": 1}');
+assertEqual(serializeArg({a:1,b:1}), '{"a": 1, "b": 1}');
+assertEqual(serializeArg(new ArrayBuffer(2)), 'new Uint8Array([0,0]).buffer');
+assertEqual(serializeArg(new Uint8Array([1,2])), 'new Uint8Array([1,2])');
+assertEqual(serializeArg(new Uint16Array([300,2])), 'new Uint16Array([300,2])');
+assertEqual(serializeArg(new DataView(new Uint8Array([1,2,3,4]).buffer, 1, 2)),
+        'new DataView(new Uint8Array([1,2,3,4]).buffer, 1, 2)');
+
+// Non-trivial serializations:
+
+var img = new Image();
+img.src = 'data:image/png,'
+assertEqual(serializeArg(img),
+        '{ /* HTMLImageElement (src="data:image/png,") */ }');
+// Not supported yet:
+assertEqual(serializeArg(document.createElement('canvas')),
+        '{ /* HTMLCanvasElement */ }');
+// Not supported yet:
+assertEqual(serializeArg(document.createElement('video')),
+        '{ /* HTMLVideoElement */ }');
+// constructImageData is an utility function exported by canvas-interceptor.js
+assertEqual(serializeArg(constructImageData(1, 2, [1,2,3,4,5,6,7,8])),
+        'constructImageData(1, 2, [1,2,3,4,5,6,7,8])');
+assertEqual(serializeArg(Math.min), 'function() { /* body hidden */ }');
+assertEqual(serializeArg(JSON), '{ /* unserializable [object JSON] */ }');
+assertEqual(serializeArg(document.body),
+        '{ /* unserializable [object HTMLBodyElement] */ }');
+
+document.body.appendChild(document.createElement('hr'));
+if (failures) {
+    document.body.appendChild(document.createTextNode(failures + ' failures!'));
+} else {
+    document.body.appendChild(document.createTextNode('All tests succeeded.'));
+}
+</script>
+</body>
