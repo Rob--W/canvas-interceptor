@@ -2,6 +2,7 @@
  * Execute this snippet before the page uses any of the canvas methods.
  *
  * See test.html for an example, and README.md for documentation.
+ * https://github.com/Rob--W/canvas-interceptor/
  */
 'use strict';
 
