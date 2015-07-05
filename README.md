@@ -20,10 +20,58 @@ var canvas = document.getElementById('mycanvas');
 var code = getCanvasReplay(canvas);
 // code can be copied to a new file to recreate the canvas,
 // and used to e.g. create reduced test cases for canvas bugs.
+// E.g. via the console: copy(code)
 </script>
 ```
 
 See test.html for more examples.
+
+
+## Usage
+
+If you control the source code, loading the snippet via a `<script>` tag as
+in the above example should work as expected. But if you want to debug a
+third-party application, it is more convenient to paste something in the
+JavaScript console.
+
+1. Identify the first script in the page, and set a breakpoint at the start of
+   the file.
+2. Reload the page. The browser will now trigger that breakpoint.
+3. Paste the following code:
+
+    ```
+    ;(function(){
+    var x = new XMLHttpRequest;
+    x.open('GET', 'https://robwu.nl/s/canvas-interceptor.js', false);
+    x.send();
+    window.eval(x.responseText);
+    })();
+    ```
+4. Step out of the debugger.
+5. Now you can freely use the public methods (documented below) to debug canvas
+   issues.
+
+
+## Reducing test cases
+
+After calling `getCanvasReplay()`, you can end up with thousands lines of code.
+This code can be pasted to a file and used for debugging. Here are some tips to
+reduce the file, in order to pinpoint the bug:
+
+- Look for `.save()` and `.restore()` calls. These functions push and pop the
+  canvas state in a stack-like way. Keep removing all lines between `.save()` up
+  to the first `.restore()` call (without other `.save()` calls in between!)
+  until the bug that you're trying to locate (dis)appears.
+- If you end up with extra `.save()` calls after removing all instructions
+  between and including `.save()` and `.restore()`, just remove the remaining
+  `.save()` calls. They are not going to be useful.
+- Remove independent and uninteresting drawings. E.g. a complete path (`moveTo`
+  followed by a sequence of `lineTo` followed by `closePath` and `stroke`).
+  Or e.g. a set of transformations that slightly alters the appearance.
+- Change some values (widths / transformations) to see the impact of a command
+  on the whole drawing, and if the result is acceptable, cut a whole chunk of
+  commands.
+
 
 ## Browser compatibility
 
@@ -35,6 +83,7 @@ Run test.html to see whether the tool works as expected.
 - Firefox 17+ (not 16- because accessor descriptors were inaccessible)
 - IE 10+ and Edge 0.11+ (IE9 and earlier doesn't support 
 - Safari (not supported because accessor descriptors are not prototypical)
+
 
 ## API documentation
 
