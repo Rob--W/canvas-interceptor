@@ -55,6 +55,18 @@ function getCanvasReplay(instance) {
 }
 
 /**
+ * Clear the logged actions.
+ *
+ * @param {CanvasRenderingContext2D|HTMLCanvasElement} instance
+ */
+function clearCanvasLog(instance) {
+    if (instance.getContext) {
+        instance = instance.getContext('2d');
+    }
+    delete instance.__proxyLogs;
+}
+
+/**
  * Wrap a prototype and log all method calls/property accesses.
  * Adds a method __proxyUnwrap to the prototype chain to allow reverting the
  * wrapper. Note that the unwrap method does not fully undo the wrapping if the

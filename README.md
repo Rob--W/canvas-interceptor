@@ -44,6 +44,9 @@ When `canvas-interceptor.js` is loaded, it modifies the prototype of
 * `getCanvasReplay(HTMLCanvasElement|CanvasRenderingContext2D)` - Get the code
   to recreate the state of the canvas from the logs.
 
+* `clearCanvasLogs(HTMLCanvasElement|CanvasRenderingContext2D)` - Reset the logs
+  for the given canvas / context.
+
 * `getCanvasName(CanvasRenderingContext2D)` - Get the identifier of the context.
   If the context was not known yet, a new name will be generated and stored in
   the `__proxyName` property of the given parameter. To get the name for a given
