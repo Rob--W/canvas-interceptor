@@ -131,8 +131,10 @@ function wrapObject(o, exclude, getName, log) {
 
     function proxyMethod(methodName, originalMethod) {
         return function proxiedMethod() {
-            var args = [].map.call(arguments, serializeArg).join(', ');
+            var dependencies = [];
+            var args = [].map.call(arguments, function(obj) { return serializeArg(obj, dependencies); }).join(', ');
             var action = getName(this) + '.' + methodName + '(' + args + ');';
+            dependencies.forEach( function(dep) { log(this, getCanvasReplay(dep)); }, this);
             log(this, action);
             return originalMethod.apply(this, arguments);
         };
@@ -163,7 +165,7 @@ function wrapObject(o, exclude, getName, log) {
  * @returns {string} Serialization of the object. This string is a valid
  *   JavaScript **expression** and could be passed to eval('(' + code + ')').
  */
-function serializeArg(obj) {
+function serializeArg(obj, dependencies) {
     if (obj === undefined) {
         return 'undefined';
     }
@@ -215,8 +217,9 @@ function serializeArg(obj) {
     }
 
     if (obj instanceof HTMLCanvasElement) {
-        // TODO: Serialize
-        return '{ /* HTMLCanvasElement */ }';
+        dependencies.push (obj);
+
+        return getCanvasName (obj.getContext('2d')) + '.canvas';
     }
 
     if (obj instanceof HTMLVideoElement) {
