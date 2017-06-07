@@ -42,9 +42,11 @@ JavaScript console.
     ```
     ;(function(){
     var x = new XMLHttpRequest;
-    x.open('GET', 'https://robwu.nl/s/canvas-interceptor.js', false);
+    x.open('GET', 'https://robwu.nl/s/canvas-interceptor.js');
+    x.onload = function () {
+        window.eval(x.responseText.replace(/(["'])use strict\1/g, ''));
+    };
     x.send();
-    window.eval(x.responseText.replace(/(["'])use strict\1/g, ''));
     })();
     ```
 4. Step out of the debugger.
